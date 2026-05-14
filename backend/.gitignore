@@ -1,0 +1,11 @@
+# Secrets
+.env
+
+# Maven build output
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# Project docs (internal only)
+parkit_project_plan.md
+STRUCTURE.md
+WARNINGS.md
