@@ -23,6 +23,12 @@ public class VehicleService {
         this.normalUserRepository = normalUserRepository;
     }
 
+    @Transactional(readOnly = true)
+    public Vehicle getById(String vehicleId) {
+        return vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found"));
+    }
+
     public VehicleResponse addVehicle(String userId, CreateVehicleRequest request) {
         NormalUser user = findNormalUser(userId);
         Vehicle vehicle = new Vehicle(
@@ -36,6 +42,13 @@ public class VehicleService {
 
     @Transactional(readOnly = true)
     public List<VehicleResponse> getMyVehicles(String userId) {
+        return vehicleRepository.findByOwnerId(userId).stream()
+                .map(VehicleResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<VehicleResponse> getUserVehicles(String userId) {
         return vehicleRepository.findByOwnerId(userId).stream()
                 .map(VehicleResponse::from)
                 .toList();

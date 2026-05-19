@@ -111,6 +111,16 @@ public class Booking {
 		return status == BookingStatusEnum.EXPIRED;
 	}
 
+	public void applyEdit(ParkingSpot newSpot, Vehicle newVehicle, Instant newStartTime, int newDurationMinutes) {
+		if (newDurationMinutes <= 0) throw new IllegalArgumentException("duration must be positive");
+		this.spot = Objects.requireNonNull(newSpot);
+		this.vehicle = Objects.requireNonNull(newVehicle);
+		this.startTime = Objects.requireNonNull(newStartTime);
+		this.duration = newDurationMinutes;
+		this.endTime = newStartTime.plus(newDurationMinutes, ChronoUnit.MINUTES);
+		this.status = BookingStatusEnum.CONFIRMED;
+	}
+
 	public void setTotalAmount(double totalAmount) {
 		this.totalAmount = totalAmount;
 	}

@@ -31,4 +31,10 @@ public class PredictionController {
         return ResponseEntity.ok(predictionService.getPredictions(floorId).stream()
                 .map(PredictionResponse::from).toList());
     }
+
+    @GetMapping("/lot/{lotId}")
+    public ResponseEntity<List<PredictionResponse>> getByLot(@PathVariable String lotId) {
+        return ResponseEntity.ok(predictionService.getPredictionsByLot(lotId).stream()
+                .map(PredictionResponse::from).toList());
+    }
 }

@@ -31,6 +31,13 @@ public class PaymentService {
         paymentRepository.save(payment);
     }
 
+    public void setPaymentAmount(String bookingId, double newTotalAmount) {
+        Payment payment = paymentRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("No payment found for booking"));
+        payment.setAmount(newTotalAmount);
+        paymentRepository.save(payment);
+    }
+
     public void refundPayment(String bookingId) {
         Payment payment = paymentRepository.findByBookingId(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("No payment found for booking"));

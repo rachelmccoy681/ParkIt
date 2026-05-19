@@ -1,14 +1,14 @@
 package com.parkit.service;
 
 import com.parkit.domain.model.ParkingFloor;
-import com.parkit.domain.model.ParkingRecommendation;
 import com.parkit.domain.model.ParkingSpot;
 import com.parkit.domain.model.Vehicle;
+import com.parkit.dto.RecommendationResponse;
 import com.parkit.repository.ParkingFloorRepository;
 import com.parkit.repository.ParkingSpotRepository;
-import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +25,7 @@ public class RecommendationService {
         this.spotRepository = spotRepository;
     }
 
-    public ParkingRecommendation recommend(Vehicle vehicle) {
+    public RecommendationResponse recommend(Vehicle vehicle) {
         List<ParkingFloor> floors = floorRepository.findAll();
 
         ParkingFloor bestFloor = floors.stream()
@@ -40,11 +40,13 @@ public class RecommendationService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No compatible spot found"));
 
-        ParkingRecommendation recommendation = new ParkingRecommendation(vehicle, Instant.now());
-        recommendation.setSuggestion(bestFloor, bestSpot,
-                "Least congested floor with an available " + bestSpot.getSpotType() + " spot.");
-
-        return recommendation;
+        return new RecommendationResponse(
+                UUID.randomUUID().toString(),
+                vehicle.getVehicleID(),
+                bestFloor.getFloorID(),
+                bestSpot.getSpotID(),
+                "Least congested floor with an available " + bestSpot.getSpotType() + " spot."
+        );
     }
 
     private boolean hasCompatibleAvailableSpot(ParkingFloor floor, Vehicle vehicle) {

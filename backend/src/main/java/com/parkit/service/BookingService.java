@@ -79,6 +79,56 @@ public class BookingService {
         paymentService.addToExistingPayment(bookingId, extraCost);
     }
 
+    public Booking getBookingById(String bookingId) {
+        return bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+    }
+
+    public Booking editBooking(String bookingId, ParkingSpot newSpot, Vehicle newVehicle,
+                                Instant newStartTime, int newDurationMinutes) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        if (booking.getStatus() == Booking.BookingStatusEnum.CANCELLED
+                || booking.getStatus() == Booking.BookingStatusEnum.EXPIRED) {
+            throw new IllegalStateException("Cannot edit a cancelled or expired booking");
+        }
+
+        boolean spotChanged = !booking.getSpotID().equals(newSpot.getSpotID());
+        if (spotChanged) {
+            if (!newSpot.isAvailable()) {
+                throw new IllegalStateException("Selected spot is not available");
+            }
+            if (!newSpot.isBookableBy(newVehicle)) {
+                throw new IllegalStateException("Vehicle is not eligible for this spot type");
+            }
+            spotService.updateStatus(booking.getSpotID(), ParkingSpot.SpotStatusEnum.AVAILABLE);
+            spotService.updateStatus(newSpot.getSpotID(), ParkingSpot.SpotStatusEnum.RESERVED);
+        }
+
+        double newCost = pricingStrategy.calculateCost(newSpot.getHourlyRate(), newDurationMinutes / 60.0);
+        booking.applyEdit(newSpot, newVehicle, newStartTime, newDurationMinutes);
+        booking.setTotalAmount(newCost);
+        paymentService.setPaymentAmount(bookingId, newCost);
+        return bookingRepository.save(booking);
+    }
+
+    public void deleteBooking(String bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        // Free the spot if booking was active
+        if (booking.getStatus() == Booking.BookingStatusEnum.CONFIRMED
+                || booking.getStatus() == Booking.BookingStatusEnum.EXTENDED) {
+            spotService.updateStatus(booking.getSpotID(), ParkingSpot.SpotStatusEnum.AVAILABLE);
+        }
+        bookingRepository.deleteById(bookingId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Booking> getAllBookings() {
+        return bookingRepository.findAll();
+    }
+
     @Transactional(readOnly = true)
     public List<Booking> getUserBookings(NormalUser user) {
         return bookingRepository.findByUser(user);
@@ -86,25 +136,37 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<Booking> getUserActiveBookings(NormalUser user) {
-        return bookingRepository.findByUserAndStatus(user, Booking.BookingStatusEnum.CONFIRMED);
+        return bookingRepository.findByUserAndStatusIn(user,
+                List.of(Booking.BookingStatusEnum.CONFIRMED, Booking.BookingStatusEnum.EXTENDED));
     }
 
-    // Runs every minute to expire bookings where the driver did not arrive within 5 minutes
+    // Runs every minute to expire bookings where the driver did not arrive within 5 minutes,
+    // and to expire extended bookings whose end time has passed.
     @Scheduled(fixedRate = 60_000)
     public void processExpiredBookings() {
-        Instant cutoff = Instant.now().minus(5, ChronoUnit.MINUTES);
-        List<Booking> candidates = bookingRepository.findByStatusAndStartTimeBefore(
-                Booking.BookingStatusEnum.CONFIRMED, cutoff);
+        Instant now = Instant.now();
 
-        for (Booking booking : candidates) {
+        // No-show: CONFIRMED booking started > 5 min ago but spot not OCCUPIED
+        Instant noShowCutoff = now.minus(5, ChronoUnit.MINUTES);
+        List<Booking> noShows = bookingRepository.findByStatusAndStartTimeBefore(
+                Booking.BookingStatusEnum.CONFIRMED, noShowCutoff);
+        for (Booking booking : noShows) {
             ParkingSpot spot = booking.getSpot();
             if (spot.getStatus() != ParkingSpot.SpotStatusEnum.OCCUPIED) {
                 booking.setStatus(Booking.BookingStatusEnum.EXPIRED);
                 bookingRepository.save(booking);
-
                 paymentService.refundPayment(booking.getBookingID());
                 spotService.updateStatus(spot.getSpotID(), ParkingSpot.SpotStatusEnum.AVAILABLE);
             }
+        }
+
+        // Overtime: EXTENDED booking whose end time has passed
+        List<Booking> overtime = bookingRepository.findByStatusAndEndTimeBefore(
+                Booking.BookingStatusEnum.EXTENDED, now);
+        for (Booking booking : overtime) {
+            booking.setStatus(Booking.BookingStatusEnum.EXPIRED);
+            bookingRepository.save(booking);
+            spotService.updateStatus(booking.getSpotID(), ParkingSpot.SpotStatusEnum.AVAILABLE);
         }
     }
 }

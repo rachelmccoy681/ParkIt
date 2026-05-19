@@ -15,6 +15,10 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
 
     List<Booking> findByUserAndStatus(NormalUser user, Booking.BookingStatusEnum status);
 
+    List<Booking> findByUserAndStatusIn(NormalUser user, Collection<Booking.BookingStatusEnum> statuses);
+
+    List<Booking> findByStatusAndEndTimeBefore(Booking.BookingStatusEnum status, Instant cutoff);
+
     List<Booking> findByStatus(Booking.BookingStatusEnum status);
 
     // Finds confirmed bookings whose start time has passed the expiry cutoff (startTime + 5 min).

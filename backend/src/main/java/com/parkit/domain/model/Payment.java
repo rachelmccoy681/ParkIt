@@ -71,6 +71,11 @@ public class Payment {
 		this.amount += extra;
 	}
 
+	public void setAmount(double newAmount) {
+		if (newAmount <= 0) throw new IllegalArgumentException("amount must be greater than zero");
+		this.amount = newAmount;
+	}
+
 	public boolean processPayment() {
 		if (status != PaymentStatusEnum.PENDING) {
 			return false;

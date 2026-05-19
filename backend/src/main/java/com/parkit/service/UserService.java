@@ -132,6 +132,16 @@ public class UserService {
         userRepository.save(user);
     }
 
+    public void updateUsername(String userId, String newUsername) {
+        if (userRepository.existsByUsername(newUsername)) {
+            throw new IllegalStateException("Username already taken");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setUsername(newUsername);
+        userRepository.save(user);
+    }
+
     private String generateCode() {
         return String.format("%06d", random.nextInt(1_000_000));
     }
