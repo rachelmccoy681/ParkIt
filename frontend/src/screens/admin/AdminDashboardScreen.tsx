@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as lotsApi from '../../api/lots';
 import { useAuth } from '../../context/AuthContext';
@@ -25,17 +26,19 @@ export default function AdminDashboardScreen({ navigation }: Props) {
   const [floorsByLot, setFloorsByLot] = useState<Record<string, ParkingFloorResponse[]>>({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    lotsApi.getLots().then(async res => {
-      setLots(res.data);
-      const map: Record<string, ParkingFloorResponse[]> = {};
-      await Promise.all(res.data.map(async lot => {
-        const fr = await lotsApi.getFloors(lot.lotId);
-        map[lot.lotId] = fr.data;
-      }));
-      setFloorsByLot(map);
-    }).catch(() => Alert.alert('Error', 'Could not load lot data')).finally(() => setLoading(false));
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      lotsApi.getLots().then(async res => {
+        setLots(res.data);
+        const map: Record<string, ParkingFloorResponse[]> = {};
+        await Promise.all(res.data.map(async lot => {
+          const fr = await lotsApi.getFloors(lot.lotId);
+          map[lot.lotId] = fr.data;
+        }));
+        setFloorsByLot(map);
+      }).catch(() => Alert.alert('Error', 'Could not load lot data')).finally(() => setLoading(false));
+    }, [])
+  );
 
   const totalFloors = Object.values(floorsByLot).reduce((sum, floors) => sum + floors.length, 0);
 

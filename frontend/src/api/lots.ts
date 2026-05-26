@@ -16,5 +16,10 @@ export const getAvailableSpots = (floorId: string) =>
 export const getSpot = (spotId: string) =>
   client.get<ParkingSpotResponse>(`/api/spots/${spotId}`);
 
+export const getBookableSpots = (floorId: string, startTime: string, endTime: string) =>
+  client.get<ParkingSpotResponse[]>(`/api/floors/${floorId}/spots/bookable`, {
+    params: { startTime, endTime },
+  });
+
 export const updateSpotStatus = (spotId: string, status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED') =>
   client.put(`/api/spots/${spotId}/status`, { status });

@@ -6,7 +6,7 @@ import * as bookingsApi from '../../api/bookings';
 import { BookingsStackParams } from '../../navigation/DriverTabs';
 import { colors, gradients, radius, shadows, spacing, typography } from '../../theme';
 import { BookingResponse } from '../../types';
-import { formatDuration } from '../../utils/bookingUtils';
+import { formatDateTime, formatDuration } from '../../utils/bookingUtils';
 
 type Props = NativeStackScreenProps<BookingsStackParams, 'BookingDetail'>;
 
@@ -19,11 +19,6 @@ const STATUS_CONFIG = {
 };
 
 const EXTEND_OPTIONS = [30, 60, 120, 180];
-
-function formatDateTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 function InfoRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
@@ -46,6 +41,21 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
   }, [bookingId]);
 
   const isActive = booking && (booking.status === 'CONFIRMED' || booking.status === 'PENDING' || booking.status === 'EXTENDED');
+  const canCheckIn = booking && (booking.status === 'CONFIRMED' || booking.status === 'EXTENDED') && booking.spotStatus === 'RESERVED';
+  const checkedIn = booking?.spotStatus === 'OCCUPIED';
+
+  const handleCheckIn = async () => {
+    if (!booking) return;
+    setLoading(true);
+    try {
+      const res = await bookingsApi.checkInBooking(bookingId);
+      setBooking(res.data);
+    } catch (err: any) {
+      Alert.alert('Error', err.response?.data?.error ?? 'Could not check in');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCancel = () => {
     Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
@@ -73,8 +83,9 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
         text: 'Extend', onPress: async () => {
           setLoading(true);
           try {
-            const res = await bookingsApi.extendBooking(bookingId, { additionalMinutes: minutes });
-            setBooking(res.data);
+            await bookingsApi.extendBooking(bookingId, { additionalMinutes: minutes });
+            const updated = await bookingsApi.getBooking(bookingId);
+            setBooking(updated.data);
           } catch (err: any) {
             Alert.alert('Error', err.response?.data?.error ?? 'Could not extend');
           } finally {
@@ -122,6 +133,19 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
 
         {isActive && (
           <>
+            {(canCheckIn || checkedIn) && (
+              <TouchableOpacity
+                style={[styles.checkInBtn, checkedIn && styles.checkInBtnDone]}
+                onPress={canCheckIn ? handleCheckIn : undefined}
+                disabled={!canCheckIn || loading}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.checkInBtnText, checkedIn && styles.checkInBtnTextDone]}>
+                  {checkedIn ? 'Checked In ✓' : loading ? 'Checking in…' : "I've Arrived"}
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={styles.manageBtn}
               onPress={() => navigation.navigate('EditBooking', { bookingId })}
@@ -179,6 +203,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   extendChipText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
+
+  checkInBtn: {
+    borderRadius: radius.md, padding: spacing.md, alignItems: 'center',
+    backgroundColor: colors.success, marginBottom: spacing.md,
+  },
+  checkInBtnDone: { backgroundColor: colors.surfaceAlt },
+  checkInBtnText: { ...typography.button, color: colors.textInverse },
+  checkInBtnTextDone: { color: colors.textSecondary },
 
   manageBtn: { borderRadius: radius.md, overflow: 'hidden', marginBottom: spacing.md },
   manageBtnInner: { padding: spacing.md, alignItems: 'center' },

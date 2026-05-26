@@ -1,8 +1,10 @@
 package com.parkit.service;
 
+import com.parkit.domain.model.Booking;
 import com.parkit.domain.model.ParkingSpot;
 import com.parkit.domain.sensor.SensorFeedManager;
 import com.parkit.repository.ParkingSpotRepository;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,12 @@ public class ParkingSpotService {
     public ParkingSpot getById(String spotId) {
         return spotRepository.findById(spotId)
                 .orElseThrow(() -> new IllegalArgumentException("Spot not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ParkingSpot> getBookableByFloor(String floorId, Instant startTime, Instant endTime) {
+        return spotRepository.findBookableByFloor(floorId, startTime, endTime,
+                List.of(Booking.BookingStatusEnum.CANCELLED, Booking.BookingStatusEnum.EXPIRED));
     }
 
     public void updateStatus(String spotId, ParkingSpot.SpotStatusEnum status) {

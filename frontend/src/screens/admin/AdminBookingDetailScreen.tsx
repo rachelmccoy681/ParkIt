@@ -8,7 +8,7 @@ import SpotPickerModal from '../../components/SpotPickerModal';
 import { AdminStackParams } from '../../navigation/AdminStack';
 import { colors, gradients, radius, shadows, spacing, typography } from '../../theme';
 import { BookingResponse, ParkingFloorResponse, ParkingSpotResponse } from '../../types';
-import { buildStartOptions } from '../../utils/bookingUtils';
+import { buildStartOptions, formatDuration } from '../../utils/bookingUtils';
 
 type Props = NativeStackScreenProps<AdminStackParams, 'AdminBookingDetail'>;
 
@@ -57,7 +57,7 @@ export default function AdminBookingDetailScreen({ navigation, route }: Props) {
       .then(res => {
         setBooking(res.data);
         setSelectedSpotId(res.data.spotId);
-        setSelectedDuration(res.data.duration);
+        setSelectedDuration(res.data.duration / 60);
         setSelectedStartIso(res.data.startTime);
       })
       .catch(() => Alert.alert('Error', 'Could not load booking'));
@@ -187,7 +187,7 @@ export default function AdminBookingDetailScreen({ navigation, route }: Props) {
           <View style={styles.divider} />
           <InfoRow label="End Time" value={formatDateTime(booking.endTime)} />
           <View style={styles.divider} />
-          <InfoRow label="Duration" value={`${booking.duration}h`} />
+          <InfoRow label="Duration" value={formatDuration(booking.duration)} />
           <View style={styles.divider} />
           <InfoRow label="Total" value={`$${booking.totalAmount.toFixed(2)}`} valueColor={colors.primary} />
         </View>

@@ -30,3 +30,6 @@ export const adminCreateBooking = (data: AdminCreateBookingRequest) =>
 
 export const deleteBooking = (bookingId: string) =>
   client.delete(`/api/bookings/${bookingId}`);
+
+export const checkInBooking = (bookingId: string) =>
+  client.post<BookingResponse>(`/api/bookings/${bookingId}/checkin`);

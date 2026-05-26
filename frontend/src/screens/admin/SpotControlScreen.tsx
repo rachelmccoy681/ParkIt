@@ -2,6 +2,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as lotsApi from '../../api/lots';
+import { useSpotUpdates } from '../../hooks/useSpotUpdates';
 import { AdminStackParams } from '../../navigation/AdminStack';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { ParkingSpotResponse } from '../../types';
@@ -42,6 +43,12 @@ export default function SpotControlScreen({ route }: Props) {
       .catch(() => Alert.alert('Error', 'Could not load spots'))
       .finally(() => setLoading(false));
   }, [floorId]);
+
+  useSpotUpdates((msg) => {
+    setSpots(prev => prev.map(s =>
+      s.spotId === msg.spotId ? { ...s, status: msg.status } : s
+    ));
+  });
 
   const handleToggle = (spot: ParkingSpotResponse) => {
     const cfg = STATUS_CONFIG[spot.status];

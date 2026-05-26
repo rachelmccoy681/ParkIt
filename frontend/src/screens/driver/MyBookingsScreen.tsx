@@ -96,8 +96,16 @@ export default function MyBookingsScreen({ navigation }: Props) {
       .finally(() => setLoading(false));
   }, [userId]));
 
-  const active = useMemo(() => bookings.filter(b => ACTIVE_STATUSES.has(b.status)), [bookings]);
-  const past   = useMemo(() => bookings.filter(b => !ACTIVE_STATUSES.has(b.status)), [bookings]);
+  const active = useMemo(() =>
+    bookings
+      .filter(b => ACTIVE_STATUSES.has(b.status))
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
+    [bookings]);
+  const past = useMemo(() =>
+    bookings
+      .filter(b => !ACTIVE_STATUSES.has(b.status))
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()),
+    [bookings]);
   const displayed = tab === 'active' ? active : past;
 
   return (

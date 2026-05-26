@@ -4,6 +4,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MapStackParams } from '../../navigation/DriverTabs';
 import { colors, gradients, radius, shadows, spacing, typography } from '../../theme';
+import { formatDateTime, formatDuration } from '../../utils/bookingUtils';
 
 type Props = NativeStackScreenProps<MapStackParams, 'SpotDetail'>;
 
@@ -31,9 +32,9 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
 }
 
 export default function SpotDetailScreen({ navigation, route }: Props) {
-  const { spot, floorLabel } = route.params;
+  const { spot, floorLabel, startTime, durationMinutes } = route.params;
   const status = STATUS_CONFIG[spot.status];
-  const isAvailable = spot.status === 'AVAILABLE';
+  const hasTimeSelection = !!startTime && !!durationMinutes;
 
   return (
     <View style={styles.container}>
@@ -56,17 +57,57 @@ export default function SpotDetailScreen({ navigation, route }: Props) {
           <View style={styles.divider} />
           <InfoRow icon="🏷️" label="Type" value={SPOT_TYPE_LABELS[spot.spotType]} />
           <View style={styles.divider} />
-          <InfoRow icon="📍" label="Status" value={status.label} />
+          <InfoRow icon="📍" label="Live Status" value={status.label} />
         </View>
 
-        {isAvailable ? (
+        {hasTimeSelection ? (
+          <>
+            <View style={[styles.timeCard, shadows.sm]}>
+              <View style={styles.timeRow}>
+                <Text style={styles.timeIcon}>🕐</Text>
+                <View>
+                  <Text style={styles.timeLabel}>Start</Text>
+                  <Text style={styles.timeValue}>{formatDateTime(startTime!)}</Text>
+                </View>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.timeRow}>
+                <Text style={styles.timeIcon}>⏱</Text>
+                <View>
+                  <Text style={styles.timeLabel}>Duration</Text>
+                  <Text style={styles.timeValue}>{formatDuration(durationMinutes!)}</Text>
+                </View>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.timeRow}>
+                <Text style={styles.timeIcon}>💵</Text>
+                <View>
+                  <Text style={styles.timeLabel}>Estimated Total</Text>
+                  <Text style={[styles.timeValue, { color: colors.primary }]}>
+                    ${(spot.hourlyRate * durationMinutes! / 60).toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.bookBtn}
+              onPress={() => navigation.navigate('BookingForm', { spot, startTime, durationMinutes })}
+              activeOpacity={0.85}
+            >
+              <LinearGradient colors={gradients.primaryHorizontal} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bookBtnInner}>
+                <Text style={styles.bookBtnText}>Book This Spot</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </>
+        ) : spot.status === 'AVAILABLE' ? (
           <TouchableOpacity
             style={styles.bookBtn}
             onPress={() => navigation.navigate('BookingForm', { spot })}
             activeOpacity={0.85}
           >
             <LinearGradient colors={gradients.primaryHorizontal} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bookBtnInner}>
-              <Text style={styles.bookBtnText}>Book This Spot</Text>
+              <Text style={styles.bookBtnText}>Book Now</Text>
             </LinearGradient>
           </TouchableOpacity>
         ) : (
@@ -74,6 +115,7 @@ export default function SpotDetailScreen({ navigation, route }: Props) {
             <Text style={[styles.unavailableText, { color: status.color }]}>
               This spot is currently {status.label.toLowerCase()}
             </Text>
+            <Text style={styles.unavailableHint}>Use the time search on the map to find when it's bookable.</Text>
           </View>
         )}
       </ScrollView>
@@ -120,13 +162,20 @@ const styles = StyleSheet.create({
   infoValue: { ...typography.bodySemiBold, marginTop: 2 },
   divider: { height: 1, backgroundColor: colors.borderLight, marginHorizontal: spacing.md },
 
+  timeCard: { backgroundColor: colors.surface, borderRadius: radius.lg, marginBottom: spacing.lg, overflow: 'hidden' },
+  timeRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.md },
+  timeIcon: { fontSize: 22, width: 32, textAlign: 'center' },
+  timeLabel: { ...typography.caption, color: colors.textSecondary },
+  timeValue: { ...typography.bodySemiBold, marginTop: 2 },
+
   bookBtn: { borderRadius: radius.md, overflow: 'hidden' },
   bookBtnInner: { padding: spacing.md, alignItems: 'center' },
   bookBtnText: { ...typography.button },
 
   unavailableCard: {
     borderWidth: 1.5, borderRadius: radius.lg,
-    padding: spacing.lg, alignItems: 'center',
+    padding: spacing.lg, alignItems: 'center', gap: spacing.sm,
   },
   unavailableText: { ...typography.bodyMedium, textAlign: 'center' },
+  unavailableHint: { ...typography.caption, color: colors.textSecondary, textAlign: 'center' },
 });

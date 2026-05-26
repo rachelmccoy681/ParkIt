@@ -109,6 +109,13 @@ public class BookingController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{bookingId}/checkin")
+    public ResponseEntity<BookingResponse> checkIn(@PathVariable String bookingId, Authentication authentication) {
+        var booking = bookingService.getBookingById(bookingId);
+        requireSelfOrAdmin(booking.getUserID(), authentication);
+        return ResponseEntity.ok(BookingResponse.from(bookingService.checkIn(bookingId)));
+    }
+
     @PostMapping("/{bookingId}/cancel")
     public ResponseEntity<Void> cancel(@PathVariable String bookingId, Authentication authentication) {
         var booking = bookingService.getBookingById(bookingId);

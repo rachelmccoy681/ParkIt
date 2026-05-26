@@ -25,7 +25,9 @@ export default function LoginScreen({ navigation }: Props) {
       const res = await authApi.login(username, password);
       await login(res.data);
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.error ?? 'Login failed');
+      const msg = err.response?.data?.error
+        ?? (err.response ? 'Login failed' : 'Cannot reach server — check your connection');
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
     }

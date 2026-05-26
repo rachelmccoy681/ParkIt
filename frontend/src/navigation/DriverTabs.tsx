@@ -11,7 +11,6 @@ import MyBookingsScreen from '../screens/driver/MyBookingsScreen';
 import ParkingMapScreen from '../screens/driver/ParkingMapScreen';
 import PredictionScreen from '../screens/driver/PredictionScreen';
 import ProfileScreen from '../screens/driver/ProfileScreen';
-import RecommendationScreen from '../screens/driver/RecommendationScreen';
 import SpotDetailScreen from '../screens/driver/SpotDetailScreen';
 import VehicleListScreen from '../screens/driver/VehicleListScreen';
 import { colors } from '../theme';
@@ -19,19 +18,15 @@ import { ParkingSpotResponse } from '../types';
 
 export type MapStackParams = {
   ParkingMap: undefined;
-  SpotDetail: { spot: ParkingSpotResponse; floorLabel: string };
-  BookingForm: { spot: ParkingSpotResponse };
+  SpotDetail: { spot: ParkingSpotResponse; floorLabel: string; startTime?: string; durationMinutes?: number };
+  BookingForm: { spot: ParkingSpotResponse; startTime?: string; durationMinutes?: number };
+  Prediction: { floorId: string; floorLabel: string };
 };
 
 export type BookingsStackParams = {
   MyBookings: undefined;
   BookingDetail: { bookingId: string };
   EditBooking: { bookingId: string };
-};
-
-export type ExploreStackParams = {
-  Recommendation: undefined;
-  Prediction: { floorId: string; floorLabel: string };
 };
 
 export type ProfileStackParams = {
@@ -42,7 +37,6 @@ export type ProfileStackParams = {
 
 const MapStack = createNativeStackNavigator<MapStackParams>();
 const BookingsStack = createNativeStackNavigator<BookingsStackParams>();
-const ExploreStack = createNativeStackNavigator<ExploreStackParams>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParams>();
 const Tab = createBottomTabNavigator();
 
@@ -52,6 +46,7 @@ function MapNavigator() {
       <MapStack.Screen name="ParkingMap" component={ParkingMapScreen} options={{ title: 'Parking Map' }} />
       <MapStack.Screen name="SpotDetail" component={SpotDetailScreen} options={{ title: 'Spot Details' }} />
       <MapStack.Screen name="BookingForm" component={BookingFormScreen} options={{ title: 'Book Spot' }} />
+      <MapStack.Screen name="Prediction" component={PredictionScreen} options={{ title: 'Availability Forecast' }} />
     </MapStack.Navigator>
   );
 }
@@ -63,15 +58,6 @@ function BookingsNavigator() {
       <BookingsStack.Screen name="BookingDetail" component={BookingDetailScreen} options={{ title: 'Booking Details' }} />
       <BookingsStack.Screen name="EditBooking" component={EditBookingScreen} options={{ title: 'Edit Booking' }} />
     </BookingsStack.Navigator>
-  );
-}
-
-function ExploreNavigator() {
-  return (
-    <ExploreStack.Navigator>
-      <ExploreStack.Screen name="Recommendation" component={RecommendationScreen} options={{ title: 'Recommendation' }} />
-      <ExploreStack.Screen name="Prediction" component={PredictionScreen} options={{ title: 'Availability Forecast' }} />
-    </ExploreStack.Navigator>
   );
 }
 
@@ -91,7 +77,6 @@ const TAB_ICONS: Record<string, { focused: IoniconsName; outline: IoniconsName }
   Home: { focused: 'home', outline: 'home-outline' },
   Map: { focused: 'map', outline: 'map-outline' },
   Bookings: { focused: 'calendar', outline: 'calendar-outline' },
-  Explore: { focused: 'sparkles', outline: 'sparkles-outline' },
   Profile: { focused: 'person-circle', outline: 'person-circle-outline' },
 };
 
@@ -114,7 +99,6 @@ export default function DriverTabs() {
       <Tab.Screen name="Home" component={DriverDashboardScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="Map" component={MapNavigator} />
       <Tab.Screen name="Bookings" component={BookingsNavigator} />
-      <Tab.Screen name="Explore" component={ExploreNavigator} />
       <Tab.Screen name="Profile" component={ProfileNavigator} />
     </Tab.Navigator>
   );

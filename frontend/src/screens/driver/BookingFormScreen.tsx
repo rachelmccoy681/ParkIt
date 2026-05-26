@@ -4,23 +4,36 @@ import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as bookingsApi from '../../api/bookings';
 import * as vehiclesApi from '../../api/vehicles';
-import { useAuth } from '../../context/AuthContext';
 import { MapStackParams } from '../../navigation/DriverTabs';
 import { colors, gradients, radius, shadows, spacing, typography } from '../../theme';
 import { VehicleResponse } from '../../types';
+import { formatDateTime } from '../../utils/bookingUtils';
 
 type Props = NativeStackScreenProps<MapStackParams, 'BookingForm'>;
 
 const DURATION_OPTIONS = [1, 2, 3, 4, 6, 8, 12, 24];
 const VEHICLE_ICONS: Record<string, string> = { GAS: '⛽', EV: '⚡', HYBRID: '🔋' };
 
+function formatEndTime(startIso: string, durationHours: number): string {
+  const d = new Date(new Date(startIso).getTime() + durationHours * 3600_000);
+  return d.toLocaleString('en-AU', {
+    weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
+  });
+}
+
 export default function BookingFormScreen({ navigation, route }: Props) {
-  const { spot } = route.params;
-  const { userId } = useAuth();
+  const { spot, startTime, durationMinutes } = route.params;
+
   const [vehicles, setVehicles] = useState<VehicleResponse[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(null);
-  const [durationHours, setDurationHours] = useState(1);
+  const [durationHours, setDurationHours] = useState(
+    durationMinutes ? durationMinutes / 60 : 1
+  );
   const [loading, setLoading] = useState(false);
+
+  // Effective start time: from search params or now
+  const effectiveStartIso = startTime ?? new Date().toISOString();
+  const isScheduled = !!startTime;
 
   useEffect(() => {
     vehiclesApi.getMyVehicles().then(res => {
@@ -38,14 +51,16 @@ export default function BookingFormScreen({ navigation, route }: Props) {
     }
     setLoading(true);
     try {
+      // Use a fresh "now" for live bookings so the time doesn't expire while the user selects a vehicle
+      const bookingStart = isScheduled ? effectiveStartIso : new Date().toISOString();
       await bookingsApi.createBooking({
         spotId: spot.spotId,
         vehicleId: selectedVehicle.vehicleId,
-        startTime: new Date().toISOString(),
+        startTime: bookingStart,
         durationMinutes: durationHours * 60,
       });
-      Alert.alert('Booking Confirmed!', `Your spot is booked for ${durationHours}h. Total: $${totalAmount.toFixed(2)}`, [
-        { text: 'View Bookings', onPress: () => navigation.popToTop() },
+      Alert.alert('Thanks for your booking!', '', [
+        { text: 'OK', onPress: () => navigation.popToTop() },
       ]);
     } catch (err: any) {
       Alert.alert('Error', err.response?.data?.error ?? 'Could not create booking');
@@ -58,12 +73,53 @@ export default function BookingFormScreen({ navigation, route }: Props) {
     <View style={styles.container}>
       <LinearGradient colors={gradients.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <Text style={styles.headerTitle}>Book Spot</Text>
-        <Text style={styles.headerSub}>Spot #{spot.spotId.slice(-6).toUpperCase()} · ${spot.hourlyRate}/hr</Text>
+        <Text style={styles.headerSub}>
+          Floor {spot.floorLabel} · Spot #{spot.spotId.slice(-6).toUpperCase()} · ${spot.hourlyRate}/hr
+        </Text>
       </LinearGradient>
 
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
 
-        <Text style={styles.sectionTitle}>Select Vehicle</Text>
+        {/* Time info */}
+        <View style={[styles.card, shadows.sm]}>
+          <View style={styles.timeRow}>
+            <Text style={styles.timeIcon}>🕐</Text>
+            <View>
+              <Text style={styles.timeLabel}>Start Time</Text>
+              <Text style={styles.timeValue}>
+                {isScheduled ? formatDateTime(effectiveStartIso) : 'Now'}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.timeRow}>
+            <Text style={styles.timeIcon}>🏁</Text>
+            <View>
+              <Text style={styles.timeLabel}>End Time</Text>
+              <Text style={styles.timeValue}>{formatEndTime(effectiveStartIso, durationHours)}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Duration */}
+        <Text style={styles.sectionTitle}>Duration</Text>
+        <View style={styles.durationGrid}>
+          {DURATION_OPTIONS.map(h => (
+            <TouchableOpacity
+              key={h}
+              style={[styles.durationChip, durationHours === h && styles.durationChipSelected]}
+              onPress={() => setDurationHours(h)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.durationChipText, durationHours === h && styles.durationChipTextSelected]}>
+                {h}h
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Vehicle */}
+        <Text style={styles.sectionTitle}>Vehicle</Text>
         {vehicles.length === 0 ? (
           <View style={[styles.card, styles.emptyCard]}>
             <Text style={styles.emptyText}>No vehicles found. Add one in your profile.</Text>
@@ -93,31 +149,16 @@ export default function BookingFormScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        <Text style={styles.sectionTitle}>Duration</Text>
-        <View style={styles.durationGrid}>
-          {DURATION_OPTIONS.map(h => (
-            <TouchableOpacity
-              key={h}
-              style={[styles.durationChip, durationHours === h && styles.durationChipSelected]}
-              onPress={() => setDurationHours(h)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.durationChipText, durationHours === h && styles.durationChipTextSelected]}>
-                {h}h
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
+        {/* Summary */}
         <View style={[styles.summaryCard, shadows.md]}>
           <Text style={styles.sectionTitle}>Summary</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Rate</Text>
-            <Text style={styles.summaryValue}>${spot.hourlyRate.toFixed(2)} / hr</Text>
-          </View>
-          <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Duration</Text>
             <Text style={styles.summaryValue}>{durationHours} hour{durationHours !== 1 ? 's' : ''}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Rate</Text>
+            <Text style={styles.summaryValue}>${spot.hourlyRate.toFixed(2)} / hr</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.summaryRow}>
@@ -126,13 +167,20 @@ export default function BookingFormScreen({ navigation, route }: Props) {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.bookBtn} onPress={handleBook} disabled={loading || !selectedVehicle} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.bookBtn}
+          onPress={handleBook}
+          disabled={loading || !selectedVehicle}
+          activeOpacity={0.85}
+        >
           <LinearGradient
             colors={selectedVehicle ? gradients.primaryHorizontal : ['#C4B5FD', '#C4B5FD']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             style={styles.bookBtnInner}
           >
-            <Text style={styles.bookBtnText}>{loading ? 'Booking…' : `Confirm Booking · $${totalAmount.toFixed(2)}`}</Text>
+            <Text style={styles.bookBtnText}>
+              {loading ? 'Booking…' : `Confirm Booking · $${totalAmount.toFixed(2)}`}
+            </Text>
           </LinearGradient>
         </TouchableOpacity>
 
@@ -157,18 +205,13 @@ const styles = StyleSheet.create({
   emptyCard: { padding: spacing.lg, alignItems: 'center' },
   emptyText: { ...typography.caption, textAlign: 'center' },
 
-  vehicleRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.md },
-  vehicleRowSelected: { backgroundColor: colors.primaryLight },
-  vehicleIcon: { fontSize: 24 },
-  vehicleInfo: { flex: 1 },
-  vehicleName: { ...typography.bodySemiBold },
-  vehiclePlate: { ...typography.caption, marginTop: 2 },
-  checkmark: { fontSize: 18, color: colors.primary, fontWeight: '700' },
+  timeRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.md },
+  timeIcon: { fontSize: 22, width: 32, textAlign: 'center' },
+  timeLabel: { ...typography.caption, color: colors.textSecondary },
+  timeValue: { ...typography.bodySemiBold, marginTop: 2 },
   divider: { height: 1, backgroundColor: colors.borderLight, marginHorizontal: spacing.md },
 
-  durationGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg,
-  },
+  durationGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
   durationChip: {
     width: 60, height: 44, borderRadius: radius.md,
     borderWidth: 1.5, borderColor: colors.border,
@@ -179,10 +222,18 @@ const styles = StyleSheet.create({
   durationChipText: { ...typography.bodyMedium, color: colors.textSecondary },
   durationChipTextSelected: { color: colors.primary, fontWeight: '700' },
 
+  vehicleRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.md },
+  vehicleRowSelected: { backgroundColor: colors.primaryLight },
+  vehicleIcon: { fontSize: 24 },
+  vehicleInfo: { flex: 1 },
+  vehicleName: { ...typography.bodySemiBold },
+  vehiclePlate: { ...typography.caption, marginTop: 2 },
+  checkmark: { fontSize: 18, color: colors.primary, fontWeight: '700' },
+
   summaryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm },
   summaryLabel: { ...typography.body, color: colors.textSecondary },
-  summaryValue: { ...typography.bodyMedium },
+  summaryValue: { ...typography.bodyMedium, flex: 1, textAlign: 'right' },
   totalLabel: { ...typography.bodySemiBold, fontSize: 17 },
   totalValue: { fontSize: 20, fontWeight: '800', color: colors.primary },
 

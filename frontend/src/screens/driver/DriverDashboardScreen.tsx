@@ -6,10 +6,12 @@ import {
 } from 'react-native';
 import * as bookingsApi from '../../api/bookings';
 import * as lotsApi from '../../api/lots';
+import * as recommendationsApi from '../../api/recommendations';
+import * as vehiclesApi from '../../api/vehicles';
 import { useAuth } from '../../context/AuthContext';
 import { useSpotUpdates } from '../../hooks/useSpotUpdates';
 import { colors, gradients, radius, shadows, spacing, typography } from '../../theme';
-import { BookingResponse, ParkingSpotResponse } from '../../types';
+import { BookingResponse, ParkingSpotResponse, RecommendationResponse } from '../../types';
 import { formatDuration } from '../../utils/bookingUtils';
 
 function greeting() {
@@ -67,6 +69,9 @@ export default function DriverDashboardScreen() {
   const [spots, setSpots] = useState<ParkingSpotResponse[]>([]);
   const [activeBookings, setActiveBookings] = useState<BookingResponse[]>([]);
   const [loadingSpots, setLoadingSpots] = useState(true);
+  const [recommendation, setRecommendation] = useState<RecommendationResponse | null>(null);
+  const [recommendedSpot, setRecommendedSpot] = useState<ParkingSpotResponse | null>(null);
+  const [loadingRec, setLoadingRec] = useState(false);
   const { userId } = useAuth();
 
   useEffect(() => {
@@ -95,10 +100,27 @@ export default function DriverDashboardScreen() {
     return () => { cancelled = true; };
   }, []);
 
+  // Auto-fetch recommendation + spot details for the user's first vehicle
+  useEffect(() => {
+    vehiclesApi.getMyVehicles().then(async res => {
+      if (res.data.length === 0) return;
+      try {
+        const recRes = await recommendationsApi.getRecommendation(res.data[0].vehicleId);
+        setRecommendation(recRes.data);
+        const spotRes = await lotsApi.getSpot(recRes.data.suggestedSpotId);
+        setRecommendedSpot(spotRes.data);
+      } catch {}
+    }).catch(() => {});
+  }, []);
+
   useFocusEffect(useCallback(() => {
     if (!userId) return;
     bookingsApi.getActiveBookings(userId)
-      .then(res => setActiveBookings(res.data))
+      .then(res => setActiveBookings(
+        res.data
+          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+          .slice(0, 2)
+      ))
       .catch(() => {});
   }, [userId]));
 
@@ -148,6 +170,51 @@ export default function DriverDashboardScreen() {
               onPress={() => navigation.navigate('Bookings', { screen: 'BookingDetail', params: { bookingId: b.bookingId } })}
             />
           ))}
+        </View>
+      )}
+
+      {recommendation && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recommended For You</Text>
+          <View style={[styles.recCard, shadows.sm]}>
+            <View style={styles.recHeader}>
+              <Text style={styles.recIcon}>✨</Text>
+              <View style={styles.recHeaderText}>
+                {recommendedSpot ? (
+                  <>
+                    <Text style={styles.recTitle}>
+                      Floor {recommendedSpot.floorLabel} · Spot #{recommendedSpot.spotId.slice(-6).toUpperCase()}
+                      {' · '}
+                      {recommendedSpot.spotType === 'EV' ? 'EV Charging' : recommendedSpot.spotType === 'DISABLED' ? 'Accessible' : 'Standard'}
+                    </Text>
+                    <Text style={styles.recFloor}>${recommendedSpot.hourlyRate.toFixed(2)} / hr</Text>
+                  </>
+                ) : (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                )}
+              </View>
+            </View>
+            <View style={styles.recReasonBox}>
+              <Text style={styles.recReason}>{recommendation.reason}</Text>
+            </View>
+            {recommendedSpot ? (
+              <TouchableOpacity
+                style={styles.recBtn}
+                onPress={() => navigation.navigate('Map', { screen: 'BookingForm', params: { spot: recommendedSpot } })}
+                activeOpacity={0.85}
+              >
+                <LinearGradient colors={gradients.primaryHorizontal} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.recBtnInner}>
+                  <Text style={styles.recBtnText}>Book This Spot</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            ) : (
+              <View style={[styles.recBtn, { opacity: 0.4 }]}>
+                <View style={[styles.recBtnInner, { backgroundColor: colors.primaryMuted }]}>
+                  <Text style={styles.recBtnText}>Loading spot…</Text>
+                </View>
+              </View>
+            )}
+          </View>
         </View>
       )}
 
@@ -219,6 +286,28 @@ const styles = StyleSheet.create({
   },
   bookingDuration: { ...typography.caption, fontWeight: '600' },
   bookingAmount: { fontSize: 16, fontWeight: '800', color: colors.primary },
+
+  recCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    overflow: 'hidden', marginBottom: spacing.sm,
+  },
+  recHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    padding: spacing.md,
+  },
+  recIcon: { fontSize: 28 },
+  recHeaderText: { flex: 1 },
+  recTitle: { ...typography.bodySemiBold, fontSize: 18, color: colors.primary },
+  recFloor: { ...typography.caption, marginTop: 2 },
+  recReasonBox: {
+    marginHorizontal: spacing.md, marginBottom: spacing.md,
+    backgroundColor: colors.primaryLight, borderRadius: radius.sm,
+    padding: spacing.sm, borderLeftWidth: 3, borderLeftColor: colors.primary,
+  },
+  recReason: { ...typography.caption, color: colors.primaryDark },
+  recBtn: { margin: spacing.md, marginTop: 0, borderRadius: radius.sm, overflow: 'hidden' },
+  recBtnInner: { padding: spacing.sm, alignItems: 'center' },
+  recBtnText: { ...typography.button },
 
   primaryAction: { borderRadius: radius.md, overflow: 'hidden', marginBottom: spacing.sm },
   primaryActionInner: {

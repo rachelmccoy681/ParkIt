@@ -41,6 +41,7 @@ export interface ParkingFloorResponse {
 export interface ParkingSpotResponse {
   spotId: string;
   floorId: string;
+  floorLabel: string;
   spotType: 'STANDARD' | 'EV' | 'DISABLED';
   status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED';
   hourlyRate: number;
@@ -58,6 +59,7 @@ export interface BookingResponse {
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED' | 'EXTENDED';
   floorLabel: string;
   spotType: 'STANDARD' | 'EV' | 'DISABLED';
+  spotStatus: 'AVAILABLE' | 'RESERVED' | 'OCCUPIED';
 }
 
 export interface PaymentResponse {

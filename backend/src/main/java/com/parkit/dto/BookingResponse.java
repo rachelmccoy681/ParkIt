@@ -14,7 +14,8 @@ public record BookingResponse(
         double totalAmount,
         String status,
         String floorLabel,
-        String spotType
+        String spotType,
+        String spotStatus
 ) {
     public static BookingResponse from(Booking booking) {
         return new BookingResponse(
@@ -28,7 +29,8 @@ public record BookingResponse(
                 booking.getTotalAmount(),
                 booking.getStatus().name(),
                 booking.getSpot().getFloor().getFloorLabel(),
-                booking.getSpot().getSpotType().name()
+                booking.getSpot().getSpotType().name(),
+                booking.getSpot().getStatus().name()
         );
     }
 }

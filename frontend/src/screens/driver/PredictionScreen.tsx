@@ -3,11 +3,11 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import { Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as predictionsApi from '../../api/predictions';
-import { ExploreStackParams } from '../../navigation/DriverTabs';
+import { MapStackParams } from '../../navigation/DriverTabs';
 import { colors, gradients, radius, shadows, spacing, typography } from '../../theme';
 import { PredictionResponse } from '../../types';
 
-type Props = NativeStackScreenProps<ExploreStackParams, 'Prediction'>;
+type Props = NativeStackScreenProps<MapStackParams, 'Prediction'>;
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const BAR_MAX_WIDTH = SCREEN_WIDTH - spacing.lg * 2 - spacing.lg * 2 - 56;

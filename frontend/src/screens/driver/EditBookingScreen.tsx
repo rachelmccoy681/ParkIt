@@ -13,6 +13,7 @@ import { colors, gradients, radius, shadows, spacing, typography } from '../../t
 import {
   BookingResponse, ParkingFloorResponse, ParkingSpotResponse, VehicleResponse,
 } from '../../types';
+import { buildStartOptions } from '../../utils/bookingUtils';
 
 type Props = NativeStackScreenProps<BookingsStackParams, 'EditBooking'>;
 
@@ -20,26 +21,6 @@ const DURATION_OPTIONS = [1, 2, 3, 4, 6, 8, 12, 24];
 const VEHICLE_ICONS: Record<string, string> = { GAS: '⛽', EV: '⚡', HYBRID: '🔋' };
 const STATUS_COLORS = { AVAILABLE: colors.available, OCCUPIED: colors.occupied, RESERVED: colors.reserved };
 const SPOT_TYPE_ICONS: Record<string, string> = { STANDARD: '', EV: '⚡', DISABLED: '♿' };
-
-function buildStartOptions(): { label: string; iso: string }[] {
-  const now = new Date();
-  const opts: { label: string; iso: string }[] = [];
-  for (let dayOffset = 0; dayOffset <= 2; dayOffset++) {
-    for (const hour of [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]) {
-      const d = new Date(now);
-      d.setDate(d.getDate() + dayOffset);
-      d.setHours(hour, 0, 0, 0);
-      if (d <= now) continue;
-      const dayLabel = dayOffset === 0 ? 'Today' : dayOffset === 1 ? 'Tomorrow' : 'In 2 days';
-      opts.push({
-        label: `${dayLabel} ${hour}:00`,
-        iso: d.toISOString(),
-      });
-      if (opts.length >= 12) return opts;
-    }
-  }
-  return opts;
-}
 
 export default function EditBookingScreen({ navigation, route }: Props) {
   const { bookingId } = route.params;
@@ -117,7 +98,7 @@ export default function EditBookingScreen({ navigation, route }: Props) {
         durationMinutes: durationHours * 60,
       });
       Alert.alert('Booking Updated', 'Your booking has been modified.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+        { text: 'OK', onPress: () => navigation.popToTop() },
       ]);
     } catch (err: any) {
       Alert.alert('Error', err.response?.data?.error ?? 'Could not update booking');
