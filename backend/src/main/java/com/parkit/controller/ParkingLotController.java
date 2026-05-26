@@ -2,8 +2,7 @@ package com.parkit.controller;
 
 import com.parkit.dto.ParkingFloorResponse;
 import com.parkit.dto.ParkingLotResponse;
-import com.parkit.repository.ParkingFloorRepository;
-import com.parkit.repository.ParkingLotRepository;
+import com.parkit.service.ParkingLotService;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,31 +14,26 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/lots")
 public class ParkingLotController {
 
-    private final ParkingLotRepository lotRepository;
-    private final ParkingFloorRepository floorRepository;
+    private final ParkingLotService lotService;
 
-    public ParkingLotController(ParkingLotRepository lotRepository,
-                                  ParkingFloorRepository floorRepository) {
-        this.lotRepository = lotRepository;
-        this.floorRepository = floorRepository;
+    public ParkingLotController(ParkingLotService lotService) {
+        this.lotService = lotService;
     }
 
     @GetMapping
     public ResponseEntity<List<ParkingLotResponse>> getAll() {
-        return ResponseEntity.ok(lotRepository.findAll().stream()
+        return ResponseEntity.ok(lotService.getAllLots().stream()
                 .map(ParkingLotResponse::from).toList());
     }
 
     @GetMapping("/{lotId}")
     public ResponseEntity<ParkingLotResponse> getById(@PathVariable String lotId) {
-        return ResponseEntity.ok(lotRepository.findById(lotId)
-                .map(ParkingLotResponse::from)
-                .orElseThrow(() -> new IllegalArgumentException("Lot not found")));
+        return ResponseEntity.ok(ParkingLotResponse.from(lotService.getLotById(lotId)));
     }
 
     @GetMapping("/{lotId}/floors")
     public ResponseEntity<List<ParkingFloorResponse>> getFloors(@PathVariable String lotId) {
-        return ResponseEntity.ok(floorRepository.findByLotId(lotId).stream()
+        return ResponseEntity.ok(lotService.getFloorsByLot(lotId).stream()
                 .map(ParkingFloorResponse::from).toList());
     }
 }

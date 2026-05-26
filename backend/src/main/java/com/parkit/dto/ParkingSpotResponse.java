@@ -5,6 +5,7 @@ import com.parkit.domain.model.ParkingSpot;
 public record ParkingSpotResponse(
         String spotId,
         String floorId,
+        String floorLabel,
         String spotType,
         String status,
         double hourlyRate
@@ -13,6 +14,7 @@ public record ParkingSpotResponse(
         return new ParkingSpotResponse(
                 spot.getSpotID(),
                 spot.getFloorID(),
+                spot.getFloor().getFloorLabel(),
                 spot.getSpotType().name(),
                 spot.getStatus().name(),
                 spot.getHourlyRate()

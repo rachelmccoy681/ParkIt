@@ -52,18 +52,6 @@ public class AvailabilityPrediction {
 		}
 	}
 
-	public double generatePrediction() {
-		return predictedAvailability;
-	}
-
-	public double getPredictionForTimeSlot(Instant datetime) {
-		Objects.requireNonNull(datetime);
-		if (!datetime.equals(timeSlot)) {
-			return 0.0;
-		}
-		return predictedAvailability;
-	}
-
 	public String getPredictionID() {
 		return predictionID;
 	}

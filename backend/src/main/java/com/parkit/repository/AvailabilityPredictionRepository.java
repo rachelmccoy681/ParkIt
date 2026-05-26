@@ -16,6 +16,13 @@ public interface AvailabilityPredictionRepository extends JpaRepository<Availabi
     @Query("SELECT p FROM AvailabilityPrediction p WHERE p.floor.floorID = :floorId AND p.timeSlot >= :from ORDER BY p.timeSlot ASC")
     List<AvailabilityPrediction> findByFloorIdFrom(@Param("floorId") String floorId, @Param("from") Instant from);
 
+    @Query("""
+            SELECT p FROM AvailabilityPrediction p
+            WHERE p.floor.lot.lotID = :lotId AND p.timeSlot >= :from
+            ORDER BY p.floor.floorID, p.timeSlot ASC
+            """)
+    List<AvailabilityPrediction> findByLotIdFrom(@Param("lotId") String lotId, @Param("from") Instant from);
+
     @Modifying
     @Query("DELETE FROM AvailabilityPrediction p WHERE p.floor.floorID = :floorId")
     void deleteByFloorId(@Param("floorId") String floorId);

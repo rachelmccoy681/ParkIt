@@ -15,6 +15,10 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
 
     List<Booking> findByUserAndStatus(NormalUser user, Booking.BookingStatusEnum status);
 
+    List<Booking> findByUserAndStatusIn(NormalUser user, Collection<Booking.BookingStatusEnum> statuses);
+
+    List<Booking> findByStatusAndEndTimeBefore(Booking.BookingStatusEnum status, Instant cutoff);
+
     List<Booking> findByStatus(Booking.BookingStatusEnum status);
 
     // Finds confirmed bookings whose start time has passed the expiry cutoff (startTime + 5 min).
@@ -35,4 +39,28 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
                                           @Param("from") Instant from,
                                           @Param("to") Instant to,
                                           @Param("statuses") Collection<Booking.BookingStatusEnum> statuses);
+
+    // Counts active bookings whose time window overlaps [startTime, endTime).
+    // Used to detect conflicts before creating or editing a booking.
+    @Query("""
+            SELECT COUNT(b) FROM Booking b
+            WHERE b.spot.spotID = :spotId
+              AND b.status NOT IN :excluded
+              AND b.startTime < :endTime
+              AND b.endTime > :startTime
+            """)
+    long countOverlappingBookings(@Param("spotId") String spotId,
+                                   @Param("startTime") Instant startTime,
+                                   @Param("endTime") Instant endTime,
+                                   @Param("excluded") Collection<Booking.BookingStatusEnum> excluded);
+
+    // Used by the upcoming-booking activator to find bookings about to start.
+    @Query("""
+            SELECT b FROM Booking b
+            WHERE b.status = 'CONFIRMED'
+              AND b.startTime >= :from
+              AND b.startTime < :to
+            """)
+    List<Booking> findConfirmedStartingBetween(@Param("from") Instant from,
+                                                @Param("to") Instant to);
 }

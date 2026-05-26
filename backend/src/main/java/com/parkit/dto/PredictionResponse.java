@@ -7,14 +7,16 @@ public record PredictionResponse(
         String predictionId,
         String floorId,
         Instant timeSlot,
-        double predictedAvailability
+        double predictedAvailability,
+        Instant generatedAt
 ) {
     public static PredictionResponse from(AvailabilityPrediction prediction) {
         return new PredictionResponse(
                 prediction.getPredictionID(),
                 prediction.getFloorID(),
                 prediction.getTimeSlot(),
-                prediction.getPredictedAvailability()
+                prediction.getPredictedAvailability(),
+                prediction.getGeneratedAt()
         );
     }
 }
