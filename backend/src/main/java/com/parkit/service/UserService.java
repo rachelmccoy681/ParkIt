@@ -31,38 +31,47 @@ public class UserService {
         this.emailService = emailService;
     }
 
-    public NormalUser register(String email, String password, String username) {
-        if (userRepository.existsByEmail(email)) {
-            throw new IllegalStateException("Email already registered");
-        }
+    private record PendingEntry(String email, String hashedPassword, String username, String code, Instant expiry) {}
+    private final java.util.concurrent.ConcurrentHashMap<String, PendingEntry> pending = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public void register(String email, String password, String username) {
+        // Block if a verified account already exists for this email
+        userRepository.findByEmail(email).ifPresent(u -> {
+            if (u.isEmailVerified()) throw new IllegalStateException("Email already registered");
+        });
         if (userRepository.existsByUsername(username)) {
             throw new IllegalStateException("Username already taken");
         }
-        NormalUser user = new NormalUser(email, passwordEncoder.encode(password), username);
+        // Also block if another pending registration already claimed this username
+        boolean usernamePending = pending.values().stream()
+                .anyMatch(e -> e.username().equals(username) && !e.email().equals(email));
+        if (usernamePending) {
+            throw new IllegalStateException("Username already taken");
+        }
+
         String code = generateCode();
-        user.setVerificationCode(code);
-        user.setVerificationCodeExpiry(Instant.now().plus(15, ChronoUnit.MINUTES));
-        NormalUser saved = normalUserRepository.save(user);
+        pending.put(email, new PendingEntry(
+                email, passwordEncoder.encode(password), username, code,
+                Instant.now().plus(15, ChronoUnit.MINUTES)));
         emailService.sendVerificationEmail(email, code);
-        return saved;
     }
 
     public void verifyEmail(String email, String code) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("No user found with that email"));
-        if (user.isEmailVerified()) {
-            throw new IllegalStateException("Email already verified");
+        PendingEntry entry = pending.get(email);
+        if (entry == null) {
+            throw new IllegalArgumentException("No pending registration for that email");
         }
-        if (user.getVerificationCode() == null || !user.getVerificationCode().equals(code)) {
+        if (!entry.code().equals(code)) {
             throw new IllegalArgumentException("Invalid verification code");
         }
-        if (Instant.now().isAfter(user.getVerificationCodeExpiry())) {
+        if (Instant.now().isAfter(entry.expiry())) {
+            pending.remove(email);
             throw new IllegalArgumentException("Verification code has expired");
         }
+        NormalUser user = new NormalUser(entry.email(), entry.hashedPassword(), entry.username());
         user.setEmailVerified(true);
-        user.setVerificationCode(null);
-        user.setVerificationCodeExpiry(null);
-        userRepository.save(user);
+        normalUserRepository.save(user);
+        pending.remove(email);
     }
 
     public void initiateForgotPassword(String email) {

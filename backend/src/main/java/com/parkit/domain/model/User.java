@@ -40,12 +40,6 @@ public abstract class User {
 	@Column(name = "is_email_verified", nullable = false, columnDefinition = "boolean default false")
 	private boolean isEmailVerified = false;
 
-	@Column(name = "verification_code")
-	private String verificationCode;
-
-	@Column(name = "verification_code_expiry")
-	private Instant verificationCodeExpiry;
-
 	@Column(name = "reset_code")
 	private String resetCode;
 
@@ -124,22 +118,6 @@ public abstract class User {
 
 	public void setEmailVerified(boolean emailVerified) {
 		isEmailVerified = emailVerified;
-	}
-
-	public String getVerificationCode() {
-		return verificationCode;
-	}
-
-	public void setVerificationCode(String verificationCode) {
-		this.verificationCode = verificationCode;
-	}
-
-	public Instant getVerificationCodeExpiry() {
-		return verificationCodeExpiry;
-	}
-
-	public void setVerificationCodeExpiry(Instant verificationCodeExpiry) {
-		this.verificationCodeExpiry = verificationCodeExpiry;
 	}
 
 	public String getResetCode() {

@@ -70,7 +70,14 @@ export default function VerifyEmailScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.footerLink}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.footerLink}>
+            <Text style={styles.footerText}>
+              Wrong details?{' '}
+              <Text style={styles.footerAccent}>Back to Register</Text>
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => navigation.navigate('Login')} style={[styles.footerLink, { marginTop: spacing.sm }]}>
             <Text style={styles.footerText}>
               Back to{' '}
               <Text style={styles.footerAccent}>Sign In</Text>
