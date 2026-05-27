@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
-import { Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as predictionsApi from '../../api/predictions';
 import { MapStackParams } from '../../navigation/DriverTabs';
 import { colors, gradients, radius, shadows, spacing, typography } from '../../theme';
@@ -28,29 +28,14 @@ export default function PredictionScreen({ route }: Props) {
   const { floorId, floorLabel } = route.params;
   const [predictions, setPredictions] = useState<PredictionResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
 
-  const fetchPredictions = () => {
+  useEffect(() => {
     setLoading(true);
     predictionsApi.getPredictions(floorId)
       .then(res => setPredictions(res.data))
       .catch(() => setPredictions([]))
       .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { fetchPredictions(); }, [floorId]);
-
-  const handleGenerate = async () => {
-    setGenerating(true);
-    try {
-      await predictionsApi.generatePredictions(floorId);
-      fetchPredictions();
-    } catch {
-      Alert.alert('Error', 'Could not generate predictions');
-    } finally {
-      setGenerating(false);
-    }
-  };
+  }, [floorId]);
 
   return (
     <View style={styles.container}>
@@ -103,11 +88,6 @@ export default function PredictionScreen({ route }: Props) {
           </View>
         )}
 
-        <TouchableOpacity style={styles.generateBtn} onPress={handleGenerate} disabled={generating} activeOpacity={0.85}>
-          <LinearGradient colors={gradients.primaryHorizontal} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.generateBtnInner}>
-            <Text style={styles.generateBtnText}>{generating ? 'Generating…' : '🔄 Refresh Predictions'}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -148,7 +128,4 @@ const styles = StyleSheet.create({
   emptyTitle: { ...typography.h3, marginBottom: spacing.sm },
   emptySubtitle: { ...typography.caption, textAlign: 'center', marginBottom: spacing.lg },
 
-  generateBtn: { borderRadius: radius.md, overflow: 'hidden' },
-  generateBtnInner: { padding: spacing.md, alignItems: 'center' },
-  generateBtnText: { ...typography.button },
 });
