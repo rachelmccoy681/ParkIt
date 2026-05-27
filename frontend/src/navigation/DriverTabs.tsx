@@ -97,7 +97,7 @@ export default function DriverTabs() {
       })}
     >
       <Tab.Screen name="Home" component={DriverDashboardScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="Map" component={MapNavigator} />
+      <Tab.Screen name="Map" component={MapNavigator} options={{ unmountOnBlur: true }} />
       <Tab.Screen name="Bookings" component={BookingsNavigator} />
       <Tab.Screen name="Profile" component={ProfileNavigator} />
     </Tab.Navigator>

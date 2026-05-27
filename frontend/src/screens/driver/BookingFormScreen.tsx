@@ -42,6 +42,7 @@ export default function BookingFormScreen({ navigation, route }: Props) {
     }).catch(() => Alert.alert('Error', 'Could not load vehicles'));
   }, []);
 
+
   const totalAmount = durationHours * spot.hourlyRate;
 
   const handleBook = async () => {
@@ -53,14 +54,20 @@ export default function BookingFormScreen({ navigation, route }: Props) {
     try {
       // Use a fresh "now" for live bookings so the time doesn't expire while the user selects a vehicle
       const bookingStart = isScheduled ? effectiveStartIso : new Date().toISOString();
-      await bookingsApi.createBooking({
+      const res = await bookingsApi.createBooking({
         spotId: spot.spotId,
         vehicleId: selectedVehicle.vehicleId,
         startTime: bookingStart,
         durationMinutes: durationHours * 60,
       });
       Alert.alert('Thanks for your booking!', '', [
-        { text: 'OK', onPress: () => navigation.popToTop() },
+        {
+          text: 'View Booking',
+          onPress: () => {
+            navigation.popToTop();
+            navigation.getParent()?.navigate('Bookings', { screen: 'MyBookings' });
+          },
+        },
       ]);
     } catch (err: any) {
       Alert.alert('Error', err.response?.data?.error ?? 'Could not create booking');

@@ -47,6 +47,13 @@ export default function ResetPasswordScreen({ navigation, route }: Props) {
             <Text style={styles.brandSub}>Enter the code sent to {email}</Text>
           </View>
 
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.footerLink}>
+            <Text style={styles.footerText}>
+              Wrong email?{' '}
+              <Text style={styles.footerAccent}>Back to Forgot Password</Text>
+            </Text>
+          </TouchableOpacity>
+
           <View style={[styles.card, shadows.md]}>
             <Text style={styles.label}>Reset Code</Text>
             <TextInput
@@ -125,4 +132,8 @@ const styles = StyleSheet.create({
   btn: { borderRadius: radius.md, overflow: 'hidden', marginTop: spacing.xs },
   btnGradient: { padding: spacing.md, alignItems: 'center' },
   btnText: { ...typography.button },
+
+  footerLink: { alignItems: 'center', marginBottom: spacing.md },
+  footerText: { ...typography.body, color: 'rgba(255,255,255,0.8)' },
+  footerAccent: { color: colors.textInverse, fontWeight: '700' },
 });
